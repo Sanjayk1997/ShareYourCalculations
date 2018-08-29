@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+  </head>
+  <style media="screen">
+  body{
+    margin-top: 30px;
+    background-color: grey;
+  }
+
+  #inputArea{
+    display: none;
+  }
+
+  #chat{
+    max-height: 220px;
+    overflow-y: scroll;
+    padding-right: 5px;
+  }
+  </style>
+
+  <body>
+
+    <div class="container">
+      <div class="jumbotron">
+         <h1>Calculator</h1>
+         <p>Calculate. Share. Analyse. Improve.</p>
+       </div>
+    </div>
+
+
+    <div class="container">
+
+      <div class="row" id="userFormArea">
+        <div class="col-md-4 col-md-offset-4">
+          <form id="userForm" class="form-inline">
+            <div class="form-group">
+              <div class="input-group">
+                <span class="input-group-addon">Username</span>
+                <input id="username" type="text" class="form-control"/>
+              </div>
+              <input type="submit" class="btn btn-primary" value="Enter">
+            </div>
+          </form>
+        </div>
+      </div>
+
+
+
+      <div class="row" id="inputArea">
+          <div class="col-md-4">
+            <div class="well">
+                <h3>Active Users</h3>
+                <ul class="list-group" id="users"></ul>
+            </div>
+          </div>
+
+          <div class="col-md-8">
+            <form id="inputForm" class="form-inline">
+              <div class="form-group">
+                <div class="input-group col-md-7">
+                  <span class="input-group-addon">Expression</span>
+                  <input id="input" type="text" class="form-control"/>
+                </div>
+                <div class="input-group col-md-4">
+                  <span class="input-group-addon">Answer</span>
+                  <input id="answer" type="text" class="form-control"/>
+                </div>
+                <br/>
+                <br/>
+                <input type="submit" class="btn btn-secondary" value="Evaluate">
+              </div>
+            </form>
+              <br />
+            <div class="chat" id="chat"></div>
+          </div>
+      </div>
+
+
+    </div>
+  </body>
+  <script>
+  $(function(){
+      var socket = io.connect();
+      var $inputForm = $('#inputForm');
+      var $input = $('#input');
+      var $chat = $('#chat');
+      var $userForm = $('#userForm');
+      var $userFormArea = $('#userFormArea');
+      var $inputArea = $('#inputArea');
+      var $username = $('#username');
+      var $users = $('#users');
+      var count = 0;
+      var $list = [];
+
+      $inputForm.submit(function(e){
+        e.preventDefault();
+        socket.emit('send', $input.val());
+        $input.val('');
+      });
+
+      socket.on('new input', function(data){
+        count ++ ;
+        var $output = eval(data.msg);
+        $chat.prepend("<div class = 'well pop' id ="+count+">"+data.msg+" = "+$output+"</div>");
+        $('#answer').val($output);
+        var ids = $(".pop").attr("id");
+        $list.push(ids);
+        if($list.length > 10){
+          var low = Math.min.apply(Math,$list);
+          $list.shift();
+          $('div').remove('#'+low);
+        }
+        });
+
+      $userForm.submit(function(e){
+        e.preventDefault();
+        socket.emit('new user', $username.val(), function(data){
+          if(data){
+            $userFormArea.hide();
+            $inputArea.show();
+            $('#answer').val('');
+          }
+        });
+        $username.val('');
+      });
+
+      socket.on('get users',function(data){
+          var html = "";
+          for (i = 0; i < data.length; i++) {
+            html += '<li class = "list-group-item">'+data[i]+'</li>';
+          }
+          $users.html(html);
+      });
+  });
+  </script>
+
+
+</html>
